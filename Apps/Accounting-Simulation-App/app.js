@@ -1,0 +1,858 @@
+let currentSimulation = '';
+let currentQuestionIndex = 0;
+let score = 0;
+let questions = [];
+
+// The full database of simulation challenges
+const simulations = {
+    tax: [
+        {
+            "id": 1,
+            "role": "Tax Associate",
+            "topic": "Catering and Entertainment Expenses",
+            "scenario": "A sales representative submits a receipt for $300 for a dinner with a prospective client to discuss catering services for the upcoming Royal Wedding. How should this expense be treated for tax purposes?",
+            "options": [
+                "Deduct the entire $300 as a business expense.",
+                "Deduct 50% of the cost ($150) as a business meal.",
+                "Reject the deduction completely as entertainment."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Deduct 50% of the cost ($150) as a business meal.",
+            "explanations": {
+                "0": "Incorrect. Deducting the entire amount violates IRS rules. Entertainment is non-deductible, and business meals are generally limited to 50%.",
+                "1": "Correct! Under IRS guidelines, business meals are typically 50% deductible if they are not lavish or extravagant and business is discussed.",
+                "2": "Incorrect. While entertainment is not deductible, food and beverages provided during a business discussion are still eligible for the 50% deduction."
+            }
+        },
+        {
+            "id": 2,
+            "role": "Tax Associate",
+            "topic": "Worker Classification",
+            "scenario": "An event planning company hires an independent floral designer who works their own hours, uses their own equipment, and operates out of their own studio. How should the company report these payments?",
+            "options": [
+                "Issue a W-2 since the designer provides services for the event.",
+                "Issue a 1099-NEC to report non-employee compensation.",
+                "No form is required if the total payment is less than $1,000."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Issue a 1099-NEC to report non-employee compensation.",
+            "explanations": {
+                "0": "Incorrect. Employees have taxes withheld and receive a W-2. Independent contractors who control their own work receive a 1099-NEC.",
+                "1": "Correct! Since the worker has behavioral and financial control, they are classified as an independent contractor.",
+                "2": "Incorrect. The threshold for filing a 1099-NEC is $600 or more per calendar year."
+            }
+        },
+        {
+            "id": 3,
+            "role": "Tax Associate",
+            "topic": "Vehicle Mileage Deduction",
+            "scenario": "An event coordinator uses their personal vehicle for both personal commuting and business-related client visits. Which method is acceptable for claiming a vehicle deduction?",
+            "options": [
+                "Deduct all fuel and maintenance receipts without logging the miles.",
+                "Calculate the deduction using the IRS standard mileage rate OR actual expenses, provided you have a mileage log.",
+                "Deduct the standard mileage rate without keeping a log of business miles."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Calculate the deduction using the IRS standard mileage rate OR actual expenses, provided you have a mileage log.",
+            "explanations": {
+                "0": "Incorrect. You cannot deduct personal vehicle usage, and the IRS requires strict substantiation (a log) to claim either method.",
+                "1": "Correct! Taxpayers can choose the standard mileage rate or the actual expense method, but adequate records must be maintained.",
+                "2": "Incorrect. You cannot claim a mileage deduction without maintaining a contemporaneous log of business vs. personal miles."
+            }
+        },
+        {
+            "id": 4,
+            "role": "Tax Associate",
+            "topic": "Charitable Contributions",
+            "scenario": "A business donates $300 to a qualified non-profit for a charity event, and the CEO receives a branded gift worth $20 in return. How much can the business claim as a deduction?",
+            "options": [
+                "The full $300.",
+                "Nothing, because they received a gift in return.",
+                "$280, because you must subtract the fair market value of the goods received."
+            ],
+            "correctAnswerIndex": 2,
+            "correctAnswer": "$280, because you must subtract the fair market value of the goods received.",
+            "explanations": {
+                "0": "Incorrect. You cannot deduct the portion of the contribution that corresponds to the value of the goods or services received in return.",
+                "1": "Incorrect. Taxpayers are allowed to deduct the amount of the contribution that exceeds the fair market value of the benefits received.",
+                "2": "Correct! The deductible amount is the total contribution ($300) minus the fair market value of the gift ($20), which equals $280."
+            }
+        },
+        {
+            "id": 5,
+            "role": "Tax Associate",
+            "topic": "Section 179 Expense Deduction",
+            "scenario": "A small business purchases $30,000 worth of new computer equipment in the current tax year. The equipment has a 5-year recovery period. What is the maximum deduction allowed if they elect Section 179?",
+            "options": [
+                "Depreciate the asset over 5 years only.",
+                "Deduct the entire $30,000 in the current year using Section 179.",
+                "Deduct 20% in the current year using straight-line depreciation only."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Deduct the entire $30,000 in the current year using Section 179.",
+            "explanations": {
+                "0": "Incorrect. While permitted, you do not have to wait over 5 years. You can write off the entire cost of qualifying equipment in the year it is placed in service.",
+                "1": "Correct! Section 179 allows businesses to write off the full purchase price of qualifying equipment in the current tax year.",
+                "2": "Incorrect. Restricting yourself to only standard depreciation means waiting several years when you can use Section 179."
+            }
+        },
+        {
+            "id": 6,
+            "role": "Tax Associate",
+            "topic": "Home Office Deduction",
+            "scenario": "A self-employed designer uses a room in their house exclusively and regularly for their business. How can the home office deduction be calculated?",
+            "options": [
+                "Deduct the entire monthly mortgage or rent payment.",
+                "Use the simplified method ($5 per square foot up to 300 sq. ft.) or the actual expense method.",
+                "Home office deductions are only allowed for W-2 corporate employees."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Use the simplified method ($5 per square foot up to 300 sq. ft.) or the actual expense method.",
+            "explanations": {
+                "0": "Incorrect. You can only deduct a percentage of home expenses based on the square footage used for business.",
+                "1": "Correct! Taxpayers have a choice between the simplified method and the actual expense method (allocating an appropriate percentage of rent/utilities).",
+                "2": "Incorrect. Self-employed individuals are eligible for the home office deduction. Employees no longer qualify for it."
+            }
+        },
+        {
+            "id": 7,
+            "role": "Tax Associate",
+            "topic": "Depreciation of Computers",
+            "scenario": "A sole proprietor purchases an office laptop for $2,000, using it 100% for business. What is the most appropriate treatment under default MACRS depreciation rules in year one?",
+            "options": [
+                "Expense the $2,000 fully on schedule C.",
+                "Apply MACRS 5-year half-year convention depreciation or take bonus depreciation if eligible.",
+                "Must treat it as an intangible asset amortization."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Apply MACRS 5-year half-year convention depreciation or take bonus depreciation if eligible.",
+            "explanations": {
+                "0": "Incorrect. Capital assets must be depreciated over their useful life, unless Section 179 or de minimis safe harbor elections are applied.",
+                "1": "Correct! Default tax treatment requires MACRS depreciation over the 5-year life, though expensing via Section 179 is also an option.",
+                "2": "Incorrect. It is tangible property with a determinable useful life, not an intangible asset."
+            }
+        },
+        {
+            "id": 8,
+            "role": "Tax Associate",
+            "topic": "Bad Debt Deduction",
+            "scenario": "Your client, an accrual-basis consulting firm, provided $5,000 of services to a client who just filed for Chapter 7 bankruptcy. How do you deduct this bad debt?",
+            "options": [
+                "Deduct it on their Schedule C as an ordinary business bad debt.",
+                "Treat it as a short-term capital loss of $3,000 max.",
+                "Accrual basis taxpayers cannot claim bad debt deductions."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Deduct it on their Schedule C as an ordinary business bad debt.",
+            "explanations": {
+                "0": "Correct! Accrual-basis taxpayers can deduct the previously included income as a bad debt if the account receivable becomes uncollectible.",
+                "1": "Incorrect. Business bad debts are deducted on the business schedule as ordinary losses.",
+                "2": "Incorrect. Accrual-basis taxpayers include income when earned, making them eligible for bad debt deductions."
+            }
+        },
+        {
+            "id": 9,
+            "role": "Tax Associate",
+            "topic": "Prepaid Expenses",
+            "scenario": "A cash-basis business pays $12,000 for a 12-month commercial lease in December, covering the next year. Under IRS rules, how is this deducted?",
+            "options": [
+                "Deduct the full $12,000 immediately as it was paid in cash.",
+                "Deduct only the portion corresponding to the current year ($1,000 for December).",
+                "Amortize over 36 months using straight-line accounting."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Deduct only the portion corresponding to the current year ($1,000 for December).",
+            "explanations": {
+                "0": "Incorrect. The 12-month rule prevents cash-basis taxpayers from deducting prepaid expenses that create a benefit extending beyond the end of the tax year.",
+                "1": "Correct! IRS rules state that prepaid rent must be deducted in the periods to which it applies, regardless of the accounting method.",
+                "2": "Incorrect. It applies to the upcoming year, not over a 36-month period."
+            }
+        },
+        {
+            "id": 10,
+            "role": "Tax Associate",
+            "topic": "Start-up Costs",
+            "scenario": "Your client spent $15,000 on market research and staff training before opening their new bakery. How are these costs treated in the first year?",
+            "options": [
+                "Capitalize and never deduct.",
+                "Deduct up to $5,000 immediately and amortize the remaining amount over 180 months.",
+                "Deduct the entire $15,000 as an ordinary operating expense."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Deduct up to $5,000 immediately and amortize the remaining amount over 180 months.",
+            "explanations": {
+                "0": "Incorrect. The IRS allows the recovery of start-up expenditures.",
+                "1": "Correct! The IRS allows you to deduct up to $5,000 of business start-up and organizational costs, with the remainder amortized over 180 months.",
+                "2": "Incorrect. The IRS does not allow immediate expensing of all start-up costs exceeding the $5,000 threshold."
+            }
+        }
+    ],
+    audit: [
+        {
+            "id": 1,
+            "role": "Audit Associate",
+            "topic": "Segregation of Duties",
+            "scenario": "A company's bookkeeper reconciles the bank statements and has the authority to sign checks up to $5,000. Which audit risk does this present?",
+            "options": [
+                "Overstatement of cash.",
+                "Inadequate segregation of duties, leading to the risk of fraud or concealed errors.",
+                "Improper classification on the Statement of Cash Flows."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Inadequate segregation of duties, leading to the risk of fraud or concealed errors.",
+            "explanations": {
+                "0": "Incorrect. Cash may be reported properly; the primary risk is control design.",
+                "1": "Correct! One person should not have custody of assets (signing checks) and record-keeping duties (bank reconciliation).",
+                "2": "Incorrect. The error is in internal control, not in classification."
+            }
+        },
+        {
+            "id": 2,
+            "role": "Audit Associate",
+            "topic": "Internal Controls",
+            "scenario": "An auditor notices that purchases over $10,000 are not being reviewed or approved by the department manager before payment. What type of control deficiency is this?",
+            "options": [
+                "Design deficiency.",
+                "Operating deficiency.",
+                "Information system deficiency."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Design deficiency.",
+            "explanations": {
+                "0": "Correct! If the control does not exist or is not written to prevent misstatements, it's a design deficiency.",
+                "1": "Incorrect. An operating deficiency implies the control is designed properly but not applied correctly.",
+                "2": "Incorrect. This is a management policy/approval issue rather than an IT issue."
+            }
+        },
+        {
+            "id": 3,
+            "role": "Audit Associate",
+            "topic": "Vouching",
+            "scenario": "To test the assertion that recorded cash disbursements are valid, the auditor selects a sample of entries from the cash disbursements journal and traces them back to which source documents?",
+            "options": [
+                "Purchase orders, receiving reports, and vendor invoices.",
+                "The general ledger and bank statements.",
+                "Customer statements and sales orders."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Purchase orders, receiving reports, and vendor invoices.",
+            "explanations": {
+                "0": "Correct! Vouching from the ledger to the source documents checks for the occurrence or validity of the expenditure.",
+                "1": "Incorrect. This just tests recording within the ledger, not external validity.",
+                "2": "Incorrect. These are related to sales rather than cash disbursements."
+            }
+        },
+        {
+            "id": 4,
+            "role": "Audit Associate",
+            "topic": "Tracing",
+            "scenario": "An auditor selects a sample of shipping documents and traces them to the corresponding sales invoices and the sales journal. This test addresses which financial statement assertion?",
+            "options": [
+                "Completeness.",
+                "Occurrence.",
+                "Valuation."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Completeness.",
+            "explanations": {
+                "0": "Correct! Tracing from source documents to the ledger ensures all valid transactions are fully recorded (completeness).",
+                "1": "Incorrect. Occurrence goes in the opposite direction (from journal to source).",
+                "2": "Incorrect. Valuation tests the dollar amounts assigned to items."
+            }
+        },
+        {
+            "id": 5,
+            "role": "Audit Associate",
+            "topic": "Analytical Procedures",
+            "scenario": "During the analytical procedures phase, the auditor identifies a 30% increase in utility expenses, while production volume remained flat. What is the next logical step?",
+            "options": [
+                "Issue a qualified audit opinion immediately.",
+                "Inquire with management and perform further substantive testing regarding the increase.",
+                "Assume the expenses were recorded correctly and ignore the anomaly."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Inquire with management and perform further substantive testing regarding the increase.",
+            "explanations": {
+                "0": "Incorrect. An auditor cannot conclude without further investigation.",
+                "1": "Correct! Unusual deviations require investigation, management inquiry, and substantive testing to find the cause.",
+                "2": "Incorrect. Ignoring unexplained changes violates auditing standards."
+            }
+        },
+        {
+            "id": 6,
+            "role": "Audit Associate",
+            "topic": "Inventory Observation",
+            "scenario": "During the year-end inventory count, you note that several high-value components are dusty and appear to have been sitting on the shelf for over two years. What should you evaluate?",
+            "options": [
+                "Whether the components are obsolete and need to be written down to Net Realizable Value.",
+                "The overall integrity of the warehouse team.",
+                "The depreciation method of equipment."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Whether the components are obsolete and need to be written down to Net Realizable Value.",
+            "explanations": {
+                "0": "Correct! Slow-moving and obsolete inventory must be evaluated for lower-of-cost-or-net-realizable-value adjustments.",
+                "1": "Incorrect. The issue relates to accounting valuation, not character judgments.",
+                "2": "Incorrect. This is inventory, not a long-term capital asset."
+            }
+        },
+        {
+            "id": 7,
+            "role": "Audit Associate",
+            "topic": "Related-Party Transactions",
+            "scenario": "While reviewing vendor records, you realize that the CFO's spouse owns a major supply vendor. How should you approach this?",
+            "options": [
+                "Report the situation to the audit committee and ensure proper disclosure.",
+                "Ignore the situation if the goods are priced at fair market value.",
+                "Refuse to complete the audit and quit."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Report the situation to the audit committee and ensure proper disclosure.",
+            "explanations": {
+                "0": "Correct! Related-party transactions must be disclosed and approved by governance to ensure arms-length transactions.",
+                "1": "Incorrect. Even if prices are fair market, disclosure is mandatory.",
+                "2": "Incorrect. The auditor should first gather evidence and report the finding to the appropriate level of governance."
+            }
+        },
+        {
+            "id": 8,
+            "role": "Audit Associate",
+            "topic": "Subsequent Events",
+            "scenario": "On February 15th, before the audit report is issued on March 1st, a major customer of your client files for bankruptcy. This customer owed $100,000 at year-end. What should the auditor do?",
+            "options": [
+                "Do nothing, because the customer was solvent at the balance sheet date.",
+                "Ensure the financial statements are adjusted for the uncollectible account.",
+                "Change the audit opinion to adverse."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Ensure the financial statements are adjusted for the uncollectible account.",
+            "explanations": {
+                "0": "Incorrect. It provides evidence about conditions existing at the balance sheet date.",
+                "1": "Correct! Adjusting journal entries are required for subsequent events that provide additional evidence about conditions existing at the balance sheet date.",
+                "2": "Incorrect. Adjusting the financial statements is the required corrective action."
+            }
+        },
+        {
+            "id": 9,
+            "role": "Audit Associate",
+            "topic": "Audit Sampling",
+            "scenario": "If the tolerable misstatement for an account balance is set to $50,000 and the expected misstatement is very low, how should the sample size be determined?",
+            "options": [
+                "Set the sample size to 100% of the account balance.",
+                "Use a smaller sample size because control risk and expected misstatement are low.",
+                "Increase the sample size to ensure no error is missed."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Use a smaller sample size because control risk and expected misstatement are low.",
+            "explanations": {
+                "0": "Incorrect. 100% testing is usually not necessary when control risk is low.",
+                "1": "Correct! Lower expected misstatements and strong controls allow auditors to decrease the sample size.",
+                "2": "Incorrect. Increasing the sample size creates inefficiencies."
+            }
+        },
+        {
+            "id": 10,
+            "role": "Audit Associate",
+            "topic": "Management Representation Letter",
+            "scenario": "When do you obtain the management representation letter from the CEO and CFO?",
+            "options": [
+                "At the planning stage of the audit.",
+                "At the end of the audit fieldwork, dated on the same day as the audit report.",
+                "At the beginning of each quarterly reporting period."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "At the end of the audit fieldwork, dated on the same day as the audit report.",
+            "explanations": {
+                "0": "Incorrect. It would be premature since fieldwork hasn't confirmed those representations.",
+                "1": "Correct! It must be dated with the same date as the auditor's report to cover all periods up to that point.",
+                "2": "Incorrect. It is part of the final evidence-gathering stage before issuance."
+            }
+        }
+    ],
+    financial: [
+        {
+            "id": 1,
+            "role": "Financial Reporting Analyst",
+            "topic": "Revenue Recognition (ASC 606)",
+            "scenario": "A software company enters into a contract to provide software along with three years of technical support. Under ASC 606, what must the entity do with the transaction price?",
+            "options": [
+                "Recognize the entire contract value immediately when the software is delivered.",
+                "Allocate the transaction price to each distinct performance obligation and recognize revenue as they are satisfied.",
+                "Recognize revenue evenly over the contract period, regardless of delivery."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Allocate the transaction price to each distinct performance obligation and recognize revenue as they are satisfied.",
+            "explanations": {
+                "0": "Incorrect. ASC 606 requires allocating the price to separate performance obligations based on standalone selling prices.",
+                "1": "Correct! Under ASC 606, you identify performance obligations, determine the transaction price, allocate it, and recognize revenue as each obligation is met.",
+                "2": "Incorrect. This method fails to account for performance obligations fulfilled at inception."
+            }
+        },
+        {
+            "id": 2,
+            "role": "Financial Reporting Analyst",
+            "topic": "Accrual Accounting",
+            "scenario": "On December 28th, a company pays $6,000 for a policy covering the next year's insurance. Under the matching principle, what is the reporting treatment?",
+            "options": [
+                "Record an expense of $6,000 on the date of payment.",
+                "Record $6,000 as a prepaid asset and expense $500 per month.",
+                "Record nothing until the policy expires."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Record $6,000 as a prepaid asset and expense $500 per month.",
+            "explanations": {
+                "0": "Incorrect. The expense must be matched to the periods the benefit is received, violating the matching principle.",
+                "1": "Correct! Under accrual accounting, expenses are matched to the period the economic benefits are consumed.",
+                "2": "Incorrect. This violates both matching principles and asset-recognition principles."
+            }
+        },
+        {
+            "id": 3,
+            "role": "Financial Reporting Analyst",
+            "topic": "Inventory Valuation",
+            "scenario": "During a period of rising prices (inflation), which inventory method produces the highest reported cost of goods sold (COGS) and lowers taxable income?",
+            "options": [
+                "FIFO (First-In, First-Out).",
+                "LIFO (Last-In, First-Out).",
+                "Weighted Average Cost."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "LIFO (Last-In, First-Out).",
+            "explanations": {
+                "0": "Incorrect. FIFO values older, cheaper inventory first, leading to lower COGS.",
+                "1": "Correct! Under LIFO during inflation, the most recently purchased inventory (which costs more) is sold first, increasing COGS and reducing taxes.",
+                "2": "Incorrect. Weighted average falls between the two."
+            }
+        },
+        {
+            "id": 4,
+            "role": "Financial Reporting Analyst",
+            "topic": "Depreciation Methods",
+            "scenario": "An asset is purchased for $20,000 with a $2,000 salvage value and a 5-year useful life. What is the annual depreciation under the straight-line method?",
+            "options": [
+                "The calculation is $4,000.",
+                "The calculation is $3,600.",
+                "The calculation is $4,500."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "The calculation is $3,600.",
+            "explanations": {
+                "0": "Incorrect. This is the cost without subtracting the salvage value.",
+                "1": "Correct! (Cost - Salvage Value) / Useful life: ($20,000 - $2,000) / 5 years = $3,600.",
+                "2": "Incorrect. Calculation doesn't match the straight-line formula."
+            }
+        },
+        {
+            "id": 5,
+            "role": "Financial Reporting Analyst",
+            "topic": "Lease Classification",
+            "scenario": "Under ASC 842, if a company leases machinery for 80% of its remaining economic life, how should the lease be classified?",
+            "options": [
+                "Operating lease.",
+                "Finance lease.",
+                "Service contract."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Finance lease.",
+            "explanations": {
+                "0": "Incorrect. If the lease term is 75% or more of the remaining economic life, it is classified as a finance lease.",
+                "1": "Correct! Leases covering 75% or more of the asset's useful life meet the criteria for a finance lease.",
+                "2": "Incorrect. It transfers a right of use, making it a lease."
+            }
+        },
+        {
+            "id": 6,
+            "role": "Financial Reporting Analyst",
+            "topic": "Contingencies",
+            "scenario": "A lawsuit with a remote probability of loss occurs. How should it be reported in the financial statements?",
+            "options": [
+                "Record a liability and a loss.",
+                "Disclose it in the footnotes to the financial statements.",
+                "Do not record or disclose."
+            ],
+            "correctAnswerIndex": 2,
+            "correctAnswer": "Do not record or disclose.",
+            "explanations": {
+                "0": "Incorrect. You only record liabilities for probable and estimable losses.",
+                "1": "Incorrect. Footnotes are for reasonably possible losses.",
+                "2": "Correct! Remote contingencies require no reporting or disclosure under ASC 450."
+            }
+        },
+        {
+            "id": 7,
+            "role": "Financial Reporting Analyst",
+            "topic": "Earnings Per Share (EPS)",
+            "scenario": "When calculating diluted EPS, an analyst considers dilutive securities such as convertible bonds. What is the effect on basic EPS?",
+            "options": [
+                "Diluted EPS will always be lower than or equal to basic EPS.",
+                "Diluted EPS will always be higher than basic EPS.",
+                "There is no effect on basic EPS."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Diluted EPS will always be lower than or equal to basic EPS.",
+            "explanations": {
+                "0": "Correct! Dilutive securities reduce EPS because the denominator increases without corresponding net income.",
+                "1": "Incorrect. Diluted EPS never exceeds basic EPS.",
+                "2": "Incorrect. Dilution calculations change the baseline."
+            }
+        },
+        {
+            "id": 8,
+            "role": "Financial Reporting Analyst",
+            "topic": "Statement of Cash Flows",
+            "scenario": "Using the indirect method for the statement of cash flows, how is depreciation expense presented under operating activities?",
+            "options": [
+                "It is subtracted from net income.",
+                "It is added back to net income because it is a non-cash expense.",
+                "It is ignored because it is a non-cash item."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "It is added back to net income because it is a non-cash expense.",
+            "explanations": {
+                "0": "Incorrect. Depreciation decreases net income but does not use cash.",
+                "1": "Correct! You add back non-cash expenses like depreciation to net income to reconcile to cash from operating activities.",
+                "2": "Incorrect. The adjustment is necessary to reconcile net income to actual cash flow."
+            }
+        },
+        {
+            "id": 9,
+            "role": "Financial Reporting Analyst",
+            "topic": "Intangible Assets",
+            "scenario": "A company incurs costs while developing software for internal use. How should research and development (R&D) and initial planning costs be treated?",
+            "options": [
+                "Capitalize all costs as a long-term asset.",
+                "Expense R&D costs as they are incurred.",
+                "Defer costs until the software is commercially sold."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Expense R&D costs as they are incurred.",
+            "explanations": {
+                "0": "Incorrect. Under US GAAP, R&D costs are generally expensed as incurred.",
+                "1": "Correct! R&D costs are expensed as incurred until technological feasibility is reached.",
+                "2": "Incorrect. Internal-use software costs incurred during the preliminary project stage are expensed."
+            }
+        },
+        {
+            "id": 10,
+            "role": "Financial Reporting Analyst",
+            "topic": "Impairment of Assets",
+            "scenario": "An asset with a carrying value of $500,000 has expected undiscounted future cash flows of $450,000 and fair value of $400,000. Is the asset impaired, and by how much?",
+            "options": [
+                "Not impaired.",
+                "Impaired by $50,000.",
+                "Impaired by $100,000."
+            ],
+            "correctAnswerIndex": 2,
+            "correctAnswer": "Impaired by $100,000.",
+            "explanations": {
+                "0": "Incorrect. The carrying value exceeds the undiscounted cash flows, indicating an impairment.",
+                "1": "Incorrect. Impairment loss is measured as the difference between fair value and carrying amount.",
+                "2": "Correct! The carrying value of $500,000 exceeds the fair value of $400,000 by $100,000, which is the impairment loss."
+            }
+        }
+    ],
+    forensic: [
+        {
+            "id": 1,
+            "role": "Forensic Accountant",
+            "topic": "Bank Reconciliations",
+            "scenario": "An analyst reviews a bank reconciliation and finds that the bookkeeper has hidden a check with a missing payee name. What should be investigated first?",
+            "options": [
+                "Check registers for unauthorized disbursements.",
+                "Verify depreciation methods.",
+                "Trace the entry to customer invoices."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Check registers for unauthorized disbursements.",
+            "explanations": {
+                "0": "Correct! Incomplete, unrecorded, or missing check data often indicates unauthorized or fraudulent disbursements.",
+                "1": "Incorrect. Depreciation is an accounting policy, not related to unrecorded disbursements.",
+                "2": "Incorrect. Customer invoices represent money coming into the business."
+            }
+        },
+        {
+            "id": 2,
+            "role": "Forensic Accountant",
+            "topic": "Duplicate Payments",
+            "scenario": "A forensic accountant discovers two payments for the same invoice number were issued by accounts payable on different days. This is a common indicator of:",
+            "options": [
+                "A shell company scheme.",
+                "An accidental or intentional double-payment.",
+                "A Ponzi scheme."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "An accidental or intentional double-payment.",
+            "explanations": {
+                "0": "Incorrect. A shell company typically involves fake vendors, not duplicate invoices.",
+                "1": "Correct! Processing the same invoice twice (whether accidental or deliberate) results in duplicate payments.",
+                "2": "Incorrect. Ponzi schemes are investment frauds involving fake returns."
+            }
+        },
+        {
+            "id": 3,
+            "role": "Forensic Accountant",
+            "topic": "Fraud Triangle",
+            "scenario": "The CFO begins working 7 days a week, refuses to take vacations, and brags about their new luxury house. Which element of the fraud triangle does this address?",
+            "options": [
+                "Rationalization.",
+                "Opportunity.",
+                "Incentive / Pressure."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Opportunity.",
+            "explanations": {
+                "0": "Incorrect. Rationalization is an internal justification of the fraud.",
+                "1": "Correct! Refusal to take vacations allows the perpetrator to hide the fraud and maintain complete access to systems.",
+                "2": "Incorrect. Pressure is the financial or personal reason to commit fraud."
+            }
+        },
+        {
+            "id": 4,
+            "role": "Forensic Accountant",
+            "topic": "Skimming",
+            "scenario": "An employee intercepts customer cash payments before they are recorded in the accounting system. What type of fraud is this?",
+            "options": [
+                "Larceny.",
+                "Skimming.",
+                "Disbursement fraud."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Skimming.",
+            "explanations": {
+                "0": "Incorrect. Larceny is the theft of cash after it has been recorded.",
+                "1": "Correct! Skimming involves the theft of cash prior to its entry into the accounting records (an off-book fraud).",
+                "2": "Incorrect. Disbursement fraud relates to the improper payout of cash."
+            }
+        },
+        {
+            "id": 5,
+            "role": "Forensic Accountant",
+            "topic": "Kickback Schemes",
+            "scenario": "An employee with purchasing authority consistently buys supplies from a vendor that charges 20% more than other vendors. What is a key indicator of fraud here?",
+            "options": [
+                "Unusually high prices coupled with conflicts of interest.",
+                "Inadequate depreciation.",
+                "Revenue allocation issues."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Unusually high prices coupled with conflicts of interest.",
+            "explanations": {
+                "0": "Correct! Buying overpriced materials may indicate a kickback scheme involving the purchasing employee.",
+                "1": "Incorrect. Depreciation is an asset-allocation adjustment.",
+                "2": "Incorrect. Revenue allocation issues apply to multiple performance obligations."
+            }
+        },
+        {
+            "id": 6,
+            "role": "Forensic Accountant",
+            "topic": "Inventory Shrinkage",
+            "scenario": "The warehouse reports high levels of inventory shrinkage. Which procedure should the forensic accountant perform first?",
+            "options": [
+                "Reconcile the inventory ledgers with receiving reports and shipping slips.",
+                "Adjust the books to match the physical count.",
+                "Review the bad debt expense."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Reconcile the inventory ledgers with receiving reports and shipping slips.",
+            "explanations": {
+                "0": "Correct! Reconciling documentation helps identify if inventory is being stolen, misstated, or improperly recorded.",
+                "1": "Incorrect. Adjusting the books without investigating conceals the fraud.",
+                "2": "Incorrect. Bad debt relates to uncollectible receivables."
+            }
+        },
+        {
+            "id": 7,
+            "role": "Forensic Accountant",
+            "topic": "Journal Entry Testing",
+            "scenario": "While testing journal entries, you find large, manual adjustments made at midnight on December 31st by someone without permission. What does this suggest?",
+            "options": [
+                "A typical and routine transaction.",
+                "Red flags pointing to management override of controls.",
+                "A deferred revenue entry."
+            ],
+            "correctAnswerIndex": 1,
+            "correctAnswer": "Red flags pointing to management override of controls.",
+            "explanations": {
+                "0": "Incorrect. Unapproved, manual entries outside of working hours are highly irregular.",
+                "1": "Correct! Entries made outside of regular hours by unauthorized users can indicate management override of internal controls.",
+                "2": "Incorrect. Manual entries that override controls require investigation."
+            }
+        },
+        {
+            "id": 8,
+            "role": "Forensic Accountant",
+            "topic": "Ponzi Schemes",
+            "scenario": "An investment firm yields consistent returns with zero volatility, but no actual trades occur in their accounts. What type of fraudulent operation is this?",
+            "options": [
+                "Ponzi scheme.",
+                "Legitimate hedge fund.",
+                "Insider trading scheme."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Ponzi scheme.",
+            "explanations": {
+                "0": "Correct! Ponzi schemes pay older investors with funds from new investors.",
+                "1": "Incorrect. Legitimate funds show market volatility.",
+                "2": "Incorrect. Insider trading uses non-public information, not fictitious returns."
+            }
+        },
+        {
+            "id": 9,
+            "role": "Forensic Accountant",
+            "topic": "Fictitious Vendors",
+            "scenario": "A vendor in the accounts payable ledger matches the address of an employee's personal home. What type of fraud is this?",
+            "options": [
+                "Fictitious vendor / shell company.",
+                "Larceny.",
+                "Payroll fraud."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "Fictitious vendor / shell company.",
+            "explanations": {
+                "0": "Correct! Matching addresses indicate a shell company created to divert funds to an employee.",
+                "1": "Incorrect. Larceny requires taking money already recorded.",
+                "2": "Incorrect. It is a vendor-related scheme."
+            }
+        },
+        {
+            "id": 10,
+            "role": "Forensic Accountant",
+            "topic": "Expense Report Padding",
+            "scenario": "An employee submits multiple receipts of exactly $200 for business entertainment. What anomaly suggests a review of the receipts is needed?",
+            "options": [
+                "The amounts are rounded to the same number.",
+                "The employee traveled across state lines.",
+                "The receipts indicate that the business was discussed."
+            ],
+            "correctAnswerIndex": 0,
+            "correctAnswer": "The amounts are rounded to the same number.",
+            "explanations": {
+                "0": "Correct! Exact round numbers often indicate a manufactured or padded expense report.",
+                "1": "Incorrect. Legitimate expenses can occur in any location.",
+                "2": "Incorrect. Discussing business makes it a valid expense."
+            }
+        }
+    ]
+};
+
+// Initialize UI
+document.addEventListener("DOMContentLoaded", () => {
+    // Hide game elements on load
+    document.querySelector(".quest-tracker").classList.add("hidden");
+    document.querySelector(".scenario-card").classList.add("hidden");
+    document.getElementById("options-container").classList.add("hidden");
+    
+    // Setup event listeners
+    document.getElementById("next-btn").addEventListener("click", nextQuestion);
+    document.getElementById("restart-btn").addEventListener("click", restartGame);
+    document.getElementById("change-sim-btn").addEventListener("click", backToMenu);
+    document.getElementById("back-to-menu-btn").addEventListener("click", backToMenu);
+});
+
+function selectSimulation(simName) {
+    currentSimulation = simName;
+    questions = simulations[simName];
+    currentQuestionIndex = 0;
+    score = 0;
+
+    // Hide selection menu
+    document.getElementById("selection-screen").classList.add("hidden");
+
+    // Reveal game elements
+    document.querySelector(".quest-tracker").classList.remove("hidden");
+    document.querySelector(".scenario-card").classList.remove("hidden");
+    document.getElementById("options-container").classList.remove("hidden");
+
+    loadQuestion();
+}
+
+function loadQuestion() {
+    if (currentQuestionIndex >= questions.length) {
+        showCompletion();
+        return;
+    }
+
+    const q = questions[currentQuestionIndex];
+    
+    // Update progress
+    document.getElementById("current-question").textContent = currentQuestionIndex + 1;
+    document.getElementById("total-questions").textContent = questions.length;
+    
+    // Update progress bar
+    const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
+    document.getElementById("progress-fill").style.width = `${progressPercentage}%`;
+
+    // Display
+    document.getElementById("topic-title").textContent = `${q.role}: ${q.topic}`;
+    document.getElementById("scenario-text").textContent = q.scenario;
+
+    // Populate buttons
+    const optionsContainer = document.getElementById("options-container");
+    optionsContainer.innerHTML = "";
+    
+    q.options.forEach((option, index) => {
+        const btn = document.createElement("button");
+        btn.classList.add("option-btn");
+        btn.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
+        btn.onclick = () => handleAnswer(index);
+        optionsContainer.appendChild(btn);
+    });
+}
+
+function handleAnswer(selectedIndex) {
+    const q = questions[currentQuestionIndex];
+    const feedbackBox = document.getElementById("feedback-box");
+    const feedbackTitle = document.getElementById("feedback-title");
+    const feedbackText = document.getElementById("feedback-text");
+
+    const optionsContainer = document.getElementById("options-container");
+    optionsContainer.classList.add("hidden");
+
+    if (selectedIndex === q.correctAnswerIndex) {
+        score++;
+        feedbackTitle.textContent = "🛡️ Approved by the Royal Exchequer!";
+        feedbackText.textContent = q.explanations[selectedIndex];
+    } else {
+        feedbackTitle.textContent = "⚔️ Audit Failed!";
+        feedbackText.textContent = `Correct Answer: ${q.correctAnswer}\n\n${q.explanations[selectedIndex]}`;
+    }
+
+    feedbackBox.classList.remove("hidden");
+    currentQuestionIndex++;
+}
+
+function nextQuestion() {
+    document.getElementById("feedback-box").classList.add("hidden");
+    document.getElementById("options-container").classList.remove("hidden");
+    loadQuestion();
+}
+
+function showCompletion() {
+    document.querySelector(".quest-tracker").classList.add("hidden");
+    document.querySelector(".scenario-card").classList.add("hidden");
+    document.getElementById("options-container").classList.add("hidden");
+    document.getElementById("feedback-box").classList.add("hidden");
+
+    document.getElementById("completion-screen").classList.remove("hidden");
+    document.getElementById("final-score").textContent = score;
+}
+
+function restartGame() {
+    currentQuestionIndex = 0;
+    score = 0;
+    document.querySelector(".quest-tracker").classList.remove("hidden");
+    document.querySelector(".scenario-card").classList.remove("hidden");
+    document.getElementById("options-container").classList.remove("hidden");
+    document.getElementById("completion-screen").classList.add("hidden");
+    loadQuestion();
+}
+
+function backToMenu() {
+    document.querySelector(".quest-tracker").classList.add("hidden");
+    document.querySelector(".scenario-card").classList.add("hidden");
+    document.getElementById("options-container").classList.add("hidden");
+    document.getElementById("feedback-box").classList.add("hidden");
+    document.getElementById("completion-screen").classList.add("hidden");
+
+    document.getElementById("selection-screen").classList.remove("hidden");
+}
