@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tax Ledger of the Royal Ledger</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Pinyon+Script&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="royal-container">
+        <header>
+            <h1 class="title-serif">The Royal Ledger</h1>
+            <p class="subtitle">Anno Domini 1300 – Accounting Trials</p>
+        </header>
+
+        <div id="selection-screen">
+            <h2 class="title-serif" style="font-size: 1.2rem; margin-bottom: 15px;">Choose Your Simulation</h2>
+            <div class="options-grid">
+                <button class="option-btn" onclick="selectSimulation('tax')">Tax Associate Trials</button>
+                <button class="option-btn" onclick="selectSimulation('audit')">Audit Trials</button>
+                <button class="option-btn" onclick="selectSimulation('financial')">Financial Reporting Trials</button>
+                <button class="option-btn" onclick="selectSimulation('forensic')">Forensic Accounting Trials</button>
+            </div>
+        </div>
+
+        <div class="quest-tracker hidden">
+            <span>Simulation Depth: <span id="current-question">1</span> / <span id="total-questions">10</span></span>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <button id="back-to-menu-btn" class="royal-btn" style="padding: 4px 10px; font-size: 0.7rem; margin-top: 12px;">Choose a Different Simulation</button>
+        </div>
+
+        <div class="scenario-card hidden">
+            <h2 id="topic-title">The Grand Feast</h2>
+            <p id="scenario-text">Scenario text will appear here...</p>
+        </div>
+
+        <div id="options-container" class="options-grid hidden">
+            </div>
+
+        <div id="feedback-box" class="feedback-box hidden">
+            <h3 id="feedback-title">Decree Result</h3>
+            <p id="feedback-text">Feedback will appear here...</p>
+            <button id="next-btn" class="royal-btn">Next Scenario</button>
+        </div>
+        
+        <div id="completion-screen" class="hidden">
+            <h2 class="title-serif">Vow of the Royal Assent</h2>
+            <p style="margin: 10px 0;">You have successfully balanced the ledger and completed the simulation!</p>
+            <p style="margin-bottom: 20px;">Final Score: <span id="final-score">0</span> / 10</p>
+            <button id="restart-btn" class="royal-btn">Restart this Simulation</button>
+            <button id="change-sim-btn" class="royal-btn" style="background-color: #D4AF37; color: #332720; margin-top: 8px;">Select Another Simulation</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
